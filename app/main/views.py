@@ -48,7 +48,7 @@ def edit_profile():
         current_user.about_me = form.about_me.data
         db.session.add(current_user._get_current_object())
         db.session.commit()
-        flash('Your profile has been updated.')
+        flash('您的个人资料已更新')
         return redirect(url_for('main.user', username=current_user.username))
     # 在字段中显示初始值，供用户编辑
     form.name.data = current_user.name
@@ -73,7 +73,7 @@ def edit_profile_admin(id):
         user.about_me = form.about_me.data
         db.session.add(user)
         db.session.commit()
-        flash("The profile has been updated. ")
+        flash("个人资料已更新！")
         return redirect(url_for('main.user', username=user.username))
     form.email.data = user.email
     form.username.data = user.username
@@ -146,7 +146,7 @@ def edit_post(id):
         post.body = form.body.data
         db.session.add(post)
         db.session.commit()
-        flash("The post has been updated.")
+        flash("这篇博客已经更新。")
         return redirect(url_for('main.post', id=post.id))
     form.body.data = post.body
     return render_template('edit_post.html', form=form)
@@ -177,7 +177,7 @@ def unfollow(username):
         flash("用户不存在")
         return redirect(url_for('main.index'))
     if not current_user.is_following(user):
-        flash('You are not following this user.')
+        flash('您没有关注此用户。')
         return redirect(url_for('.user', username=username))
     current_user.unfollow(user)
     db.session.commit()
@@ -201,7 +201,7 @@ def followers(username):
 def followed_by(username):
     user = User.query.filter_by(username=username).first()
     if user is None:
-        flash('Invalid user.')
+        flash('用户不存在！')
         return redirect(url_for('.index'))
     page = request.args.get('page', 1, type=int)
     pagination = user.followed.paginate(page, per_page=10, error_out=False)
