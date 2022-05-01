@@ -1,5 +1,6 @@
-from flask import render_template, flash, redirect, url_for, request, abort, make_response
+from flask import render_template, flash, redirect, url_for, request, abort, make_response, current_app
 from flask_login import login_required, current_user
+from flask_sqlalchemy import get_debug_queries
 
 from . import main
 from .forms import EditProfileForm, EditProfileAdminForm, PostForm, CommentForm
@@ -28,6 +29,7 @@ def index():
     pagination = query.order_by(Post.timestamp.desc()).paginate(page, per_page=20, error_out=False)
     posts = pagination.items
     return render_template('index.html', form=form, posts=posts, pagination=pagination)
+
 
 @main.route('/user/<username>')
 def user(username):
@@ -97,7 +99,7 @@ def post(id):
         return redirect(url_for('main.post', id=post.id, page=-1))
     page = request.args.get('page', 1, type=int)
     if page == -1:
-        page = (post.comments.count() - 1) // 10 + 1    # 评论的总量整除以每页的数量10加上1得到要显示的页数
+        page = (post.comments.count() - 1) // 10 + 1  # 评论的总量整除以每页的数量10加上1得到要显示的页数
     pagination = post.comments.order_by(Comment.timestamp.asc()).paginate(page, per_page=10, error_out=False)
     comments = pagination.items
     return render_template('post.html', posts=[post], form=form, comments=comments, pagination=pagination)
@@ -111,7 +113,6 @@ def moderate():
     pagination = Comment.query.order_by(Comment.timestamp.desc()).paginate(page, per_page=10, error_out=False)
     comments = pagination.items
     return render_template('moderate.html', comments=comments, pagination=pagination, page=page)
-
 
 
 @main.route('/moderate/enable/<int:id>')
@@ -151,6 +152,7 @@ def edit_post(id):
     form.body.data = post.body
     return render_template('edit_post.html', form=form)
 
+
 @main.route('/follow/<username>')
 @login_required
 @permission_required(Permission.FOLLOW)
@@ -184,6 +186,7 @@ def unfollow(username):
     flash(f"您已经取消了对{username}的关注!")
     return redirect(url_for('.user', username=username))
 
+
 @main.route('/followers/<username>')
 def followers(username):
     user = User.query.filter_by(username=username).first()
@@ -206,7 +209,7 @@ def followed_by(username):
     page = request.args.get('page', 1, type=int)
     pagination = user.followed.paginate(page, per_page=10, error_out=False)
     follows = [{'user': item.followed, 'timestamp': item.timestamp} for item in pagination.items]
-    return render_template('followers.html', user=user, title="关注列表",endpoint='main.followed_by',
+    return render_template('followers.html', user=user, title="关注列表", endpoint='main.followed_by',
                            pagination=pagination, follows=follows)
 
 
@@ -214,7 +217,7 @@ def followed_by(username):
 @login_required
 def show_all():
     resp = make_response(redirect(url_for('main.index')))
-    resp.set_cookie('show_followed', '', max_age=30*24*60*60)  # 30days
+    resp.set_cookie('show_followed', '', max_age=30 * 24 * 60 * 60)  # 30days
     return resp
 
 
@@ -222,5 +225,15 @@ def show_all():
 @login_required
 def show_followed():
     resp = make_response(redirect(url_for('main.index')))
-    resp.set_cookie('show_followed', '1', max_age=30*24*60*60)
+    resp.set_cookie('show_followed', '1', max_age=30 * 24 * 60 * 60)
     return resp
+
+
+@main.after_app_request
+def after_request(response):
+    for query in get_debug_queries():
+        if query.duration >= current_app.config['FLASKY_SLOW_DB_QUERY_TIME']:
+            # 把缓慢的查询写入日志（应用的日志记录器通过app.logger 设置）
+            current_app.logger.warning('Slow query: %s\nParameters: %s\nDuration: %fs\nContext: %s\n' % (
+                                       query.statement, query.parameters, query.duration, query.context))
+    return response

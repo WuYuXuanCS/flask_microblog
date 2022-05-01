@@ -14,6 +14,8 @@ class Config:
     FLASKY_MAIL_SENDER = 'Flasky Admin <flasky@example.com>'
     FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_RECORD_QUERIES = True  # 告诉Flask-SQLAlchemy 启用记录查询统计数据的功能。
+    FLASKY_SLOW_DB_QUERY_TIME = 0.5
 
     @staticmethod
     def init_app(app):

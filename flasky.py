@@ -23,3 +23,15 @@ def test(test_names):
     else:
         tests = unittest.TestLoader().discover('tests')
     unittest.TextTestRunner(verbosity=2).run(tests)
+
+
+@app.cli.command()
+@click.option('--length', default=25, help='Number of functions to include in the profiler report.')
+@click.option('--profile-dir', default=None, help='Directory where profiler data files are saved.')
+def profile(length, profile_dir):
+    """在代码分析器下启动应用程序"""
+    from werkzeug.middleware.profiler import ProfilerMiddleware
+    app.wsgi_app = ProfilerMiddleware(app.wsgi_app, restrictions=[length],
+                                      profile_dir=profile_dir)
+    if __name__ == '__main__':
+        app.run(debug=False)
